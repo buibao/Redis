@@ -1,3 +1,4 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -23,6 +24,7 @@ namespace Resdis
         {
             services.AddControllers();
             services.AddMvc().AddNewtonsoftJson();
+            services.AddAutoMapper(typeof(Startup));
             //var redis = ConnectionMultiplexer.Connect("127.0.0.1");
             //services.AddTransient(s => redis.GetServer("127.0.0.1:6379"));
             //services.AddTransient(s => redis.GetDatabase(2));

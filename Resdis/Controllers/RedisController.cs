@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -16,23 +17,33 @@ namespace Resdis.Controllers
     public class RedisController : ControllerBase
     {
         private readonly IRedisCacheClient _redis;
-        public RedisController(IRedisCacheClient redisCacheClient)
+        private readonly IMapper _mapper;
+        public RedisController(IRedisCacheClient redisCacheClient, IMapper mapper)
         {
             _redis = redisCacheClient;
+            _mapper = mapper;
         }
         // GET: api/Redis
         [HttpGet]
         [Route("location")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<Localtion>> GetLocation(string keySearch)
+        public async Task<ActionResult<List<Localtion>>> GetLocation(string keySearch)
         {
             try
             {
-                //var getKeys = _database.HashGet(keySearch);
                 var setString = String.Format("*{0}*",keySearch).ToString();
-                //var res = _database.StringGet(keySearch);
-                //var keysSearch = _server.Keys(pattern: setString).ToArray();
-                return Ok();
+                var listKeys = _redis.Db0.SearchKeys(pattern: setString);
+                var getValue = _redis.Db0.GetAll<string>(listKeys);
+                List<string> array = new List<string>();
+                List<Localtion> location = new List<Localtion>();
+                if (getValue.Any())
+                {
+                    array.AddRange(getValue.Values);
+                    array.ForEach(x => location.Add(JsonConvert.DeserializeObject<Localtion>(x)));
+                }
+                //var convert2Json = JsonConvert.DeserializeObject<List<Localtion>>(array.ForEach());
+                //var listData = _mapper.Map<Localtion>(convert2Json);
+                return Ok(location);
             }
             catch (Exception ex)
             {
@@ -46,9 +57,23 @@ namespace Resdis.Controllers
         {
             try
             {
+                //            var games = new List<Tuple<string, Nullable<double>>>()
+                //{
+                //    new Tuple<string, Nullable<double>>("Fallout 3:    $", 13.95),
+                //    new Tuple<string, Nullable<double>>("GTA V:    $", 45.95),
+                //    new Tuple<string, Nullable<double>>("Rocket League:    $", 19.95)
+                //};
+
+                //            games.Add(new Tuple<string, double?>("Skyrim", 15.10));
+                //var list = new List<Tuple<string, Localtion>>();
+
                 foreach (var item in localtion)
                 {
-                    _ = _redis.Db0.SetAdd(item.Label, JsonConvert.SerializeObject(item));
+                    _ = _redis.Db0.Add(item.Code.ToUpper(), JsonConvert.SerializeObject(item));
+                }
+                foreach (var item in localtion)
+                {
+                    _ = _redis.Db0.Add(item.Label.ToUpper(), JsonConvert.SerializeObject(item));
                 }
                 return Ok();
             }
